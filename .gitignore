@@ -1,11 +1,8 @@
-# Kube config file
-kubeconfig
-
 # GCP service account file
 service-account.json
 
 # Env file
 .env
 
-# Kube cluster repo
-kubernetes-cluster/
+# Terraform
+.terraform/
