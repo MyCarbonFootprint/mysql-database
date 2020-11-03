@@ -1,0 +1,80 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Plan and Apply Terraform scripts
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on: push
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  terraform:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+
+    # Runs a single command using the runners shell
+    - name: Install dependenties
+      shell: bash
+      run: |
+        # Install Terraform
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+        sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+        # Install Helm
+        curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+        sudo apt-get install apt-transport-https --yes
+        echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+        sudo apt-get update -y
+        sudo apt-get install helm terraform -y
+
+    # Runs a single command using the runners shell
+    - name: Prepare GCP service account file
+      shell: bash
+      env:
+        GCP_SERVICE_ACCOUNT_FILE: ${{ secrets.GCP_SERVICE_ACCOUNT_FILE }}
+      run: |
+        echo ${GCP_SERVICE_ACCOUNT_FILE} > service-account.json
+
+    # Runs a single command using the runners shell
+    - name: Terraform Init
+      shell: bash
+      env:
+        MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+      run: |
+        export GOOGLE_BACKEND_CREDENTIALS=service-account.json
+        export TF_VAR_mariadb_root_password=${MARIADB_ROOT_PASSWORD}
+        terraform init
+
+    # Runs a single command using the runners shell
+    - name: Terraform plan
+      shell: bash
+      env:
+        MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+      run: |
+        export GOOGLE_BACKEND_CREDENTIALS=service-account.json
+        export TF_VAR_mariadb_root_password=${MARIADB_ROOT_PASSWORD}
+        terraform plan
+
+    # Runs a single command using the runners shell
+    - name: Terraform apply
+      shell: bash
+      if: github.ref == 'refs/heads/master'
+      env:
+        MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+      run: |
+        export GOOGLE_BACKEND_CREDENTIALS=service-account.json
+        export TF_VAR_mariadb_root_password=${MARIADB_ROOT_PASSWORD}
+        terraform apply -auto-approve
+
+    - name: Slack Notify
+      uses: rtCamp/action-slack-notify@v2.1.0
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_USERNAME: "Github Actions"
+        SLACK_ICON_EMOJI: ":information_source"
+        SLACK_CHANNEL: "push_github"

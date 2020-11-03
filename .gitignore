@@ -1,0 +1,8 @@
+# GCP service account file
+service-account.json
+
+# Env file
+.env
+
+# Terraform
+.terraform/

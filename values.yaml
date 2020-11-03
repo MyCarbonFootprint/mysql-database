@@ -1,0 +1,14 @@
+# Metrics
+metrics:
+  enabled: true
+
+# Replicate
+architecture: replication
+secondary:
+  replicaCount: 2
+
+# Auth
+auth:
+  forcePassword: true
+  usePasswordFiles: true
+  username: restapi
